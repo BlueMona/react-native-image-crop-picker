@@ -213,6 +213,35 @@ RCT_REMAP_METHOD(clean, resolver:(RCTPromiseResolveBlock)resolve
     }
 }
 
+RCT_EXPORT_METHOD(
+    resizeImageToMaxSize:(NSString*)path
+    maxSize:(nonnull NSNumber *)maxSize
+    resolver:(RCTPromiseResolveBlock)resolve
+    rejecter:(RCTPromiseRejectBlock)reject
+)
+{
+    CGImageSourceRef imageSource = CGImageSourceCreateWithURL((CFURLRef)[NSURL fileURLWithPath:path], NULL);
+    if (!imageSource) {
+        reject(ERROR_CROPPER_IMAGE_NOT_FOUND_KEY, ERROR_CROPPER_IMAGE_NOT_FOUND_MSG, nil);
+        return;
+    }
+    CGFloat max = [maxSize doubleValue];
+    NSDictionary* d = @{
+                    (id)kCGImageSourceShouldAllowFloat: (id)kCFBooleanTrue,
+                    (id)kCGImageSourceCreateThumbnailWithTransform: (id)kCFBooleanTrue,
+                    (id)kCGImageSourceCreateThumbnailFromImageAlways: (id)kCFBooleanTrue,
+                    (id)kCGImageSourceThumbnailMaxPixelSize: @((int)(max))
+                    };
+    CGImageRef imgRef = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, (__bridge CFDictionaryRef)d);
+
+    UIImage* scaled = [UIImage imageWithCGImage:imgRef];
+    NSString *filePath = [self persistFilePNG:scaled];
+    CGImageRelease(imgRef);
+    CFRelease(imageSource);
+    resolve(filePath);
+    return;
+}
+
 RCT_EXPORT_METHOD(openPicker:(NSDictionary *)options
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject) {
@@ -681,6 +710,21 @@ RCT_EXPORT_METHOD(openCropper:(NSDictionary *)options
 
     // save cropped file
     BOOL status = [data writeToFile:filePath atomically:YES];
+    if (!status) {
+        return nil;
+    }
+
+    return filePath;
+}
+
+- (NSString*) persistFilePNG:(UIImage*)image {
+    // create temp file
+    NSString *tmpDirFullPath = [self getTmpDirectory];
+    NSString *filePath = [tmpDirFullPath stringByAppendingString:[[NSUUID UUID] UUIDString]];
+    filePath = [filePath stringByAppendingString:@".png"];
+
+    // save cropped file
+    BOOL status = [UIImagePNGRepresentation(image) writeToFile:filePath atomically:YES];
     if (!status) {
         return nil;
     }
