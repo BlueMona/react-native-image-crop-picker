@@ -37,8 +37,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -163,6 +165,27 @@ class PickerModule extends ReactContextBaseJavaModule implements ActivityEventLi
             }
         });
     }
+
+    @ReactMethod
+    public void resizeImageToMaxSize(String path, int maxSize, final Promise promise) {
+        try {
+            InputStream is = getReactApplicationContext().getContentResolver().openInputStream(Uri.parse(path));
+            Bitmap b = BitmapFactory.decodeStream(is);
+            is.close();
+            Bitmap out = Bitmap.createScaledBitmap(b, maxSize, maxSize, false);
+            File file = createImageFile();
+            FileOutputStream fOut = new FileOutputStream(file);
+            out.compress(Bitmap.CompressFormat.PNG, 100, fOut);
+            fOut.flush();
+            fOut.close();
+            b.recycle();
+            out.recycle();
+            promise.resolve(file.getAbsolutePath());
+        } catch (Exception e) {
+            promise.reject(E_CALLBACK_ERROR, e.getMessage());
+        }
+    }
+
 
     @ReactMethod
     public void cleanSingle(final String pathToDelete, final Promise promise) {
@@ -547,16 +570,6 @@ class PickerModule extends ReactContextBaseJavaModule implements ActivityEventLi
         int statusBarColor = Color.parseColor(cropperStatusBarColor);
         options.setToolbarColor(toolbarColor);
         options.setStatusBarColor(statusBarColor);
-        if (activeWidgetColor.equals(DEFAULT_TINT)) {
-            /*
-            Default tint is grey => use a more flashy color that stands out more as the call to action
-            Here we use 'Light Blue 500' from https://material.google.com/style/color.html#color-color-palette
-            */
-            options.setActiveWidgetColor(Color.parseColor(DEFAULT_WIDGET_COLOR));
-        } else {
-            //If they pass a custom tint color in, we use this for everything
-            options.setActiveWidgetColor(activeWidgetColor);
-        }
     }
 
     private void startCropping(Activity activity, Uri uri) {
