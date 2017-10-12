@@ -239,7 +239,49 @@ RCT_EXPORT_METHOD(
     CGImageRelease(imgRef);
     CFRelease(imageSource);
     resolve(filePath);
-    return;
+}
+
+RCT_EXPORT_METHOD(
+    getImageDimensions:(NSString*)path
+    resolver:(RCTPromiseResolveBlock)resolve
+    rejecter:(RCTPromiseRejectBlock)reject
+)
+{
+    CGImageSourceRef imageSource = CGImageSourceCreateWithURL((CFURLRef)[NSURL fileURLWithPath:path], NULL);
+    if (!imageSource) {
+        reject(ERROR_CROPPER_IMAGE_NOT_FOUND_KEY, ERROR_CROPPER_IMAGE_NOT_FOUND_MSG, nil);
+        return;
+    }
+    CGFloat width = 0.0f, height = 0.0f;
+    CFDictionaryRef imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
+    CFRelease(imageSource);
+    if (imageProperties != NULL) {
+        CFNumberRef widthNum  = CFDictionaryGetValue(imageProperties, kCGImagePropertyPixelWidth);
+        if (widthNum != NULL) {
+            CFNumberGetValue(widthNum, kCFNumberCGFloatType, &width);
+        }
+        CFNumberRef heightNum = CFDictionaryGetValue(imageProperties, kCGImagePropertyPixelHeight);
+        if (heightNum != NULL) {
+            CFNumberGetValue(heightNum, kCFNumberCGFloatType, &height);
+        }
+        // Check orientation and flip size if required
+        CFNumberRef orientationNum = CFDictionaryGetValue(imageProperties, kCGImagePropertyOrientation);
+        if (orientationNum != NULL) {
+            int orientation;
+            CFNumberGetValue(orientationNum, kCFNumberIntType, &orientation);
+            if (orientation > 4) {
+                CGFloat temp = width;
+                width = height;
+                height = temp;
+            }
+        }
+        CFRelease(imageProperties);
+    }
+    NSLog(@"Image dimensions: %.0f x %.0f px", width, height);
+    NSMutableDictionary* response = [[NSMutableDictionary alloc] init];
+    response[@"width"] = @(width);
+    response[@"height"] = @(height);
+    resolve(response);
 }
 
 RCT_EXPORT_METHOD(openPicker:(NSDictionary *)options
