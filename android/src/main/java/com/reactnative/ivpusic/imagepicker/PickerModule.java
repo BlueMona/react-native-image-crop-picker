@@ -19,6 +19,7 @@ import android.util.Base64;
 import android.webkit.MimeTypeMap;
 
 import com.facebook.react.bridge.ActivityEventListener;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.PromiseImpl;
@@ -181,6 +182,26 @@ class PickerModule extends ReactContextBaseJavaModule implements ActivityEventLi
             b.recycle();
             out.recycle();
             promise.resolve(file.getAbsolutePath());
+        } catch (Exception e) {
+            promise.reject(E_CALLBACK_ERROR, e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void getImageDimensions(String path, final Promise promise) {
+        try {
+            InputStream is = getReactApplicationContext().getContentResolver().openInputStream(Uri.parse(path));
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeStream(is, null, options);
+            int width = options.outWidth;
+            int height = options.outHeight;
+            String type = options.outMimeType;
+            WritableMap response = Arguments.createMap();
+            response.putInt("width", width);
+            response.putInt("height", height);
+            response.putString("type", type);
+            promise.resolve(response);
         } catch (Exception e) {
             promise.reject(E_CALLBACK_ERROR, e.getMessage());
         }
