@@ -247,8 +247,16 @@ RCT_EXPORT_METHOD(
     rejecter:(RCTPromiseRejectBlock)reject
 )
 {
-    CGImageSourceRef imageSource = CGImageSourceCreateWithURL((CFURLRef)[NSURL fileURLWithPath:path], NULL);
-    if (!imageSource) {
+    CGImageSourceRef imageSource;
+    @try {
+        imageSource = CGImageSourceCreateWithURL((CFURLRef)[NSURL fileURLWithPath:path], NULL);
+        if (!imageSource) {
+            reject(ERROR_CROPPER_IMAGE_NOT_FOUND_KEY, ERROR_CROPPER_IMAGE_NOT_FOUND_MSG, nil);
+            return;
+        }
+    }
+    @catch (NSException *exception) {
+        NSLog(@"%@", exception.reason);
         reject(ERROR_CROPPER_IMAGE_NOT_FOUND_KEY, ERROR_CROPPER_IMAGE_NOT_FOUND_MSG, nil);
         return;
     }
