@@ -304,6 +304,7 @@ RCT_EXPORT_METHOD(
     }
     CGFloat width = 0.0f, height = 0.0f;
     CFDictionaryRef imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, NULL);
+    NSString *imageType = (NSString*)CGImageSourceGetType(imageSource);
     CFRelease(imageSource);
     if (imageProperties != NULL) {
         CFNumberRef widthNum  = CFDictionaryGetValue(imageProperties, kCGImagePropertyPixelWidth);
@@ -331,6 +332,7 @@ RCT_EXPORT_METHOD(
     NSMutableDictionary* response = [[NSMutableDictionary alloc] init];
     response[@"width"] = @(width);
     response[@"height"] = @(height);
+    response[@"imageType"] = imageType;
     resolve(response);
 }
 
